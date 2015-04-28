@@ -2,84 +2,76 @@ var express = require('express');
 var fs = require('fs');
 var request = require('request');
 var $ = require('cheerio')
-var app = express();
+var path = require('path');
+var underscore = require('underscore');
 
-var periodicTable = {};
+var app = express();
+var users = [];
+
+//string contains
+String.prototype.contains = function(it) { return this.indexOf(it) != -1; };
 
 app.get('/', function(req, res){
 
-  //All the web scraping magic will happen here
+  // All the web scraping magic will happen here
 
-    // url = 'http://www.nndc.bnl.gov/wallet/zz11/z001.html'; // DO THIS z001.html through z118.html
+      var url = 'https://api.github.com/users?since=136'; //$since135
 
-    var num, url;
-    for (var j = 1; j <= 118; j++) {
-      if(j< 10) {
-        num = "00" + j;
-      } else if (j<100) {
-        num = '0'+j;
-      } else {
-        num = ''+j;
-      }
-      url = 'http://www.nndc.bnl.gov/wallet/zz11/z'+num+'.html';
+      //set headers
+      var headers = {
+          'User-Agent':       'schoenflies',
+          'Content-Type':     'application/json'
+      };
 
-      request(url, function(error, response, html){
+      //configure request
+      var options = {
+          url: url,
+          method: 'GET',
+          headers: headers,
+      };
 
-        // First we'll check to make sure no errors occurred when making the request
+      // for(var j=0; j<10; j++){
+          request(options, function(error, response, html){
 
-        if(!error){
-            // Next, we'll utilize the cheerio library on the returned html which will essentially give us jQuery functionality
+            // First we'll check to make sure no errors occurred when making the request
 
-            var parsedHTML = $.load(html);
-            var max = parsedHTML('tr').length-1;  
+            if(!error){
+                // Next, we'll utilize the cheerio library on the returned html which will essentially give us jQuery functionality
 
-            var element = {};
-                 
-            parsedHTML('tr').each(function(i, tr) {
-            // the foo html element into a cheerio object (same pattern as jQuery)
-              if(i === 2) {
-                var text = $(tr).text();
-                text = text.split('\n');
-                element.Z = parseInt(text[1]);
-                element.symbol = text[2];
-                element.isotopes = [];
-                var isotope = {};
-                isotope.A = parseInt(text[3]);
-                isotope.stability = text[6];
-                isotope.decay = text[7] === ' ' ? 'Stable' : text[7];
-                element.isotopes.push(isotope); //
+                var parsedHTML = $.load(html);
+                }
+                var data = JSON.parse(response.body);
+                
+                for(var i=0; i<data.length; i++){
+                  for(var key in data[i]){
+                    if(key === 'login'){
+                      users.push(data[i][key]);
+                    }
+                  }
+                }
 
-              }
-              if(i>2 && i<max) {
-                var text = $(tr).text();
-                text = text.split('\n');
-                var isotope = {};
-                isotope.A = parseInt(text[3]);
-                isotope.stability = text[6];
-                isotope.decay = text[7] === ' ' ? 'Stable' : text[7];
-                element.isotopes.push(isotope);
-              }
-
-              if(i===max){
-                periodicTable[element.Z]=element; 
-              }
-
-              if(i===max && element.Z ===118) {
-                console.log('------PERIODIC TABLE-------'+JSON.stringify(periodicTable, null, 2));
-                fs.writeFile('isotopes.txt', JSON.stringify(periodicTable, null, 2), function(err){
-                 if(err) throw err;
-                 console.log('FILE WRITTEN');
+                //write to file
+                fs.writeFile('users.txt', JSON.stringify(users), function (err) {
+                  if (err) throw err;
+                  console.log('DATA SAVED!');
                 });
-              }
-            });
-        }
-    });
-  }
-  res.end(202);
+
+                console.log(users);
+                console.log('URL:'+url);
+                console.log('RESPONSE HEADERS:'+JSON.stringify(response.headers));
+                if(response.headers.link.contains('rel="next"')){
+                  //update url
+                  var end = response.headers.link.indexOf('>');
+                  url = response.headers.link.slice(1,end);
+                  console.log('--------NEWURL:'+url);
+                }
+            })
+          // }
+
+  res.sendFile(path.join(__dirname+'/index.html'));
 });
+app.listen('3000');
 
-app.listen('8081')
-
-console.log('Magic happens on port 8081');
+console.log('Magic happens on port 3000');
 
 exports = module.exports = app;
