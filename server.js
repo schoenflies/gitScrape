@@ -14,23 +14,26 @@ String.prototype.contains = function(it) { return this.indexOf(it) != -1; };
 app.get('/', function(req, res){
 
   // All the web scraping magic will happen here
+          var start = 'https://api.github.com/users';
+          //set headers
+          var headers = {
+              'User-Agent':       'schoenflies',
+              'Content-Type':     'application/json'
+          };
 
-      var url = 'https://api.github.com/users?since=136'; //$since135
 
-      //set headers
-      var headers = {
-          'User-Agent':       'schoenflies',
-          'Content-Type':     'application/json'
-      };
 
-      //configure request
-      var options = {
-          url: url,
-          method: 'GET',
-          headers: headers,
-      };
-
-      for(var j=0; j<100; j++){
+      // for(var j=0; j<2; j++){
+      function getUsers(url,num){
+        if(num>2){
+          return;
+        }
+          //configure request
+          var options = {
+              url: url,
+              method: 'GET',
+              headers: headers,
+          };
           request(options, function(error, response, html){
 
             // First we'll check to make sure no errors occurred when making the request
@@ -51,22 +54,25 @@ app.get('/', function(req, res){
                 }
 
                 //write to file
-                fs.writeFile('users.txt', JSON.stringify(users), function (err) {
+                fs.appendFile('users.txt', JSON.stringify(users), function (err) {
                   if (err) throw err;
                   console.log('DATA SAVED!');
                 });
 
-                console.log(users);
-                console.log('URL:'+url);
-                console.log('RESPONSE HEADERS:'+JSON.stringify(response.headers));
+
                 if(response.headers.link.contains('rel="next"')){
                   //update url
                   var end = response.headers.link.indexOf('>');
-                  url = response.headers.link.slice(1,end);
+                  var newUrl = response.headers.link.slice(1,end);
                   console.log('--------NEWURL:'+url);
-                }
-            })
+                }//ends if(!error)
+
+                num++;
+                getUsers(newURL, num);
+            })//ends request
           }
+          // }//ends for loop
+  getUsers(start,0);
 
   res.sendFile(path.join(__dirname+'/index.html'));
 });
