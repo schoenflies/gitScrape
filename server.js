@@ -30,7 +30,7 @@ app.get('/', function(req, res){
           headers: headers,
       };
 
-      // for(var j=0; j<10; j++){
+      for(var j=0; j<10; j++){
           request(options, function(error, response, html){
 
             // First we'll check to make sure no errors occurred when making the request
@@ -66,7 +66,7 @@ app.get('/', function(req, res){
                   console.log('--------NEWURL:'+url);
                 }
             })
-          // }
+          }
 
   res.sendFile(path.join(__dirname+'/index.html'));
 });
