@@ -5,9 +5,9 @@
   "main": "server.js",
   "author": "Scotch",
   "dependencies": {
-    "cheerio": "latest",
     "express": "latest",
     "http": "0.0.0",
+    "node-neo4j": "^2.0.3",
     "path": "^0.11.14",
     "request": "latest",
     "underscore": "^1.8.3"

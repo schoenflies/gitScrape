@@ -1,83 +1,87 @@
 var express = require('express');
-var fs = require('fs');
 var request = require('request');
-var $ = require('cheerio')
+
 var path = require('path');
 var underscore = require('underscore');
 
-var app = express();
-var users = [];
+var neo4j = require('node-neo4j');
+var db = new neo4j('http://neo4j:ayanami00@localhost:7474');
 
-//string contains
+var getFollowing = require('./userData');
+
+var app = express();
+
+//String prototype
 String.prototype.contains = function(it) { return this.indexOf(it) != -1; };
 
-app.get('/', function(req, res){
+//set headers
+var headers = {
+    'User-Agent':       'schoenflies',
+    'Content-Type':     'application/json',
+    'Authorization': 'token d070ac64717e3b3f5ab47559b68a2c6d1fce6859'
+};
+
+app.get('/getData', function(req, res){
 
   // All the web scraping magic will happen here
-          var start = 'https://api.github.com/users';
-          //set headers
-          var headers = {
-              'User-Agent':       'schoenflies',
-              'Content-Type':     'application/json'
-          };
+      var start = 'https://api.github.com/users';
 
-
-
-      // for(var j=0; j<2; j++){
       function getUsers(url,num){
-        if(num>2){
-          return;
-        }
+
+        console.log('-------URL:'+url);
+        if(num>1){ return;}
           //configure request
-          var options = {
-              url: url,
-              method: 'GET',
-              headers: headers,
-          };
+          var options = { url: url, method: 'GET', headers: headers,};
+          
           request(options, function(error, response, html){
 
             // First we'll check to make sure no errors occurred when making the request
 
             if(!error){
-                // Next, we'll utilize the cheerio library on the returned html which will essentially give us jQuery functionality
 
-                var parsedHTML = $.load(html);
-                }
                 var data = JSON.parse(response.body);
-                
+
+                //iterate over logins
                 for(var i=0; i<data.length; i++){
                   for(var key in data[i]){
                     if(key === 'login'){
-                      users.push(data[i][key]);
-                    }
-                  }
-                }
-
-                //write to file
-                fs.appendFile('users.txt', JSON.stringify(users), function (err) {
-                  if (err) throw err;
-                  console.log('DATA SAVED!');
-                });
+                      var user = data[i][key];
+                      //write to database
+                      getFollowing(data[i][key]);
+                    }//end if
+                  }//end for var key
+                }//end for var i
 
 
                 if(response.headers.link.contains('rel="next"')){
-                  //update url
                   var end = response.headers.link.indexOf('>');
-                  var newUrl = response.headers.link.slice(1,end);
-                  console.log('--------NEWURL:'+url);
-                }//ends if(!error)
+                }//ends if response.headers
+            }//ends if(!error)
 
-                num++;
-                getUsers(newURL, num);
+              num++;
+              getUsers(response.headers.link.slice(1,end), num);
             })//ends request
-          }
-          // }//ends for loop
+        }//ends function
   getUsers(start,0);
 
   res.sendFile(path.join(__dirname+'/index.html'));
 });
+
+app.get('/graph', function(req, res){
+  res.sendFile(path.join(__dirname+'/graph.html'));
+});
+
+app.get('/graph.json', function(req, res){
+  res.sendFile(path.join(__dirname+'/graph.json'));
+});
+
+app.get('/data.json', function(req, res){
+  res.sendFile(path.join(__dirname+'/data.json'));
+});
+
 app.listen('3000');
 
 console.log('Magic happens on port 3000');
+
 
 exports = module.exports = app;
